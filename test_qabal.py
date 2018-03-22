@@ -23,10 +23,11 @@ def fubar(item):
     item['fubared'] = True
 
 def analytic_with_metadata(bar):
-    return {'bar': bar + '?'}
+    return bar + '?'
 
 analytic_with_metadata.__inject__ = True
 analytic_with_metadata.__trigger__ = Item['bar'] == 'bar'
+analytic_with_metadata.__creates__ = 'bar'
 
 def test_qabal_empty_route():
     sess = Session()
@@ -115,3 +116,4 @@ def test_analytic_metadata():
     assert res['bar'] == 'bar?'
     with pytest.raises(ValueError, message='Passing analytics without metadata and no route'):
         sess.add(foo)
+    

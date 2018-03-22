@@ -111,12 +111,16 @@ class Session:
         """
         # Analytics can include routing metadata. 
         # If the analytic has routing metadata, the second param is optional.
+        decorated_analytic = analytic
         if not on and not hasattr(analytic, '__trigger__'):
             raise ValueError('Route must be defined if analytic does not have route metadata.')
         if hasattr(analytic, '__trigger__'):
             trigger, test = analytic.__trigger__
         if hasattr(analytic, '__inject__') and analytic.__inject__:
-            analytic = inject(analytic)
+            decorated_analytic = inject(decorated_analytic)
+        if hasattr(analytic, '__creates__'):
+            decorated_analytic = wrap(decorated_analytic, analytic.__creates__)
+        analytic = decorated_analytic
 
         if type(on) is _QueryAST:
             trigger = '.'.join(on.keys)
@@ -142,6 +146,9 @@ class Session:
 def inject(func):
     """
     Primitive to inject dict values as signature elements, useful for more fluent APIs.
+
+    Args:
+        func: The function to enable parameter injection on.
     """
     sig = signature(func)
 
@@ -151,3 +158,25 @@ def inject(func):
         return func(**intersection)
     
     return _wrapped
+
+def wrap(func, keys):
+    """
+    Primitive to wrap the output of a function into dictionary keys.
+
+    Args:
+        func: The function to enable output wrapping on.
+        keys: The name of the keys to use in the output dictionary.
+    """
+    if type(keys) is not tuple:
+        keys = [keys]
+
+    def _wrapped(*args, **kwargs):
+        res = func(*args, **kwargs)
+        if type(res) is not tuple:
+            res = [res]
+        return {k:v for k, v in zip(keys, res)}
+    
+    return _wrapped
+
+
+
