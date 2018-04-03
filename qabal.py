@@ -1,9 +1,11 @@
 from inspect import signature
 from warnings import warn
+from datetime import datetime
 
 class _TupleAST(tuple):
     """
-    Internal class that allows Qabal query language to accept compond based queries (and and or).
+    Internal class that allows Qabal query language to accept compound based queries.
+    This is logical "and" and "or".
     """
     def __and__(self, other):
         warn('The AND operator is currently not supported by Qabal.', SyntaxWarning)
@@ -58,11 +60,10 @@ class ItemData(dict):
     Qabal injects this object into analytics that take in the content dictionary.
     Has the same interface as a dict, so it can be used by code that is unaware of Qabal.
     """
-    
     def __init__(self, *args, **kwargs):
         self.update(*args, **kwargs)
         self.changes = []
-        dict.__setitem__(self, '__analytics__', [])
+        self.provenance = []
 
     def __setitem__(self, name, val):
         self.changes.append((name, val))
@@ -72,13 +73,20 @@ class ItemData(dict):
         raise KeyError('Deleting content in an analytic is not yet supported.')
 
 
+
 class Session:
     """
     A Qabal session is a collection of subscribable queries and analytics that trigger 
     when a content dictionary is changed.
     """
-    def __init__(self):
+    def __init__(self, provenance='short'):
         self.triggers = {}
+        if provenance == 'short':
+            self.provenance_mode = 's'
+        elif provenance == 'extended':
+            self.provenance_mode = 'e'
+        else:
+            self.provenance_mode = 'n'
 
     def feed(self, content):
         """
@@ -105,8 +113,6 @@ class Session:
         changes = []
         # Now execute the analaytics that we found.
         for analytic in analytics:
-            # Step one for provenance support.
-            content['__analytics__'].append(analytic)
             content.changes.clear()
             res = analytic(content)
             # This allows for some flexibility in APIs
@@ -115,6 +121,13 @@ class Session:
                 content.update(res)
             else:
                 changes.extend(content.changes)
+        
+            # Manage data provenance
+            if self.provenance_mode == 's':
+                content.provenance.append(analytic)
+            elif self.provenance_mode == 'e':
+                content.provenance.append((analytic, datetime.now(), changes))   
+    
         content.changes = changes
         return self._route(content)
         

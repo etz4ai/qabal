@@ -38,14 +38,18 @@ def test_qabal_empty_message():
     sess = Session()
     sess.add(foo, Item['type'] == 'foo')
     res = sess.feed({})
-    assert len(res['__analytics__']) == 0
+    assert len(res.provenance) == 0
 
 def test_qabal_simple_route():
-    sess = Session()
+    sess = Session(provenance='extended')
     sess.add(foo, Item['type'] == 'foo')
     res = sess.feed({'type': 'foo'})
     assert res['foo'] == 'foo'
     assert res['type'] == 'foo'
+    assert len(res.provenance) == 1
+    analytic, timestamp, changes = res.provenance[0]
+    assert analytic.__name__ == 'foo'
+    assert len(changes) == 1
 
 def test_qabal_complex_route():
     sess = Session()
@@ -76,6 +80,8 @@ def test_qabal_complex_route():
     sess.add(inject(sig_based_analytic), Item['baz'] == 'baz!')
     res = sess.feed({'type': 'foo'})
     assert res['bar_baz'] == 'bar!baz!'
+    assert len(res.provenance) == 6
+    assert res.provenance[0].__name__ == 'foo'
 
 def test_qabal_remove():
     sess = Session()
