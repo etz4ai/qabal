@@ -1,4 +1,18 @@
 from inspect import signature
+from warnings import warn
+
+class _TupleAST(tuple):
+    """
+    Internal class that allows Qabal query language to accept compond based queries (and and or).
+    """
+    def __and__(self, other):
+        warn('The AND operator is currently not supported by Qabal.', SyntaxWarning)
+        return self
+    
+    def __or__(self, other):
+        warn('The OR operator is not currently supported by Qabal.', SyntaxWarning)
+        return self
+
 
 class _QueryAST:
     """
@@ -8,7 +22,7 @@ class _QueryAST:
     keys = []
 
     def _create_ast_node(self, test):
-        res = '.'.join(self.keys), test
+        res = _TupleAST(('.'.join(self.keys), test))
         self.keys = []
         return res
 
@@ -38,7 +52,6 @@ class _QueryAST:
         return self._create_ast_node(lambda target: other in target)
 
 Item = _QueryAST()
-
 
 class ItemData(dict):
     """
