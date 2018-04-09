@@ -20,7 +20,7 @@ class PyTest(test):
 # The actual setup metadata
 setup(
     name='qabal',
-    version='0.0.3',
+    version='0.0.4',
     description='A fast and simple message broker with content-based routing.',
     long_description=open("README.rst").read(),
     keywords='broker routing content_based',
