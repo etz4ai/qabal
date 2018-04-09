@@ -1,5 +1,6 @@
 import pytest
 from qabal import Item, Session, inject
+from types import ModuleType
 
 def foo(item):
     item['foo'] = 'foo'
@@ -28,6 +29,11 @@ def analytic_with_metadata(bar):
 analytic_with_metadata.__inject__ = True
 analytic_with_metadata.__trigger__ = Item['bar'] == 'bar'
 analytic_with_metadata.__creates__ = 'bar'
+
+# Dynamically create a module
+test_module = ModuleType('test_module')
+test_module.__dict__['analytic_with_metadata'] = analytic_with_metadata
+
 
 def test_qabal_empty_route():
     sess = Session()
@@ -117,7 +123,13 @@ def test_analytic_metadata():
     sess.add(bar, Item['foo'] == 'foo')
     res = sess.feed({'foo': 'foo'})
     assert res['bar'] == 'bar'
-    sess.add(analytic_with_metadata)
+    handle = sess.add(analytic_with_metadata)
+    res = sess.feed({'foo': 'foo'})
+    assert res['bar'] == 'bar?'
+    sess.remove(handle)
+    res = sess.feed({'foo': 'foo'})
+    assert res['bar'] == 'bar'
+    sess.add(test_module)
     res = sess.feed({'foo': 'foo'})
     assert res['bar'] == 'bar?'
     with pytest.raises(ValueError, message='Passing analytics without metadata and no route'):

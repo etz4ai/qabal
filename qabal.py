@@ -1,6 +1,7 @@
 from inspect import signature
 from warnings import warn
 from datetime import datetime
+from types import ModuleType
 
 class _TupleAST(tuple):
     """
@@ -130,6 +131,14 @@ class Session:
     
         content.changes = changes
         return self._route(content)
+    
+    def _add_module(self, analytic):
+        """
+        Scans a module and imports any relevant analytics.
+        """
+        for v in analytic.__dict__.values():
+            if hasattr(v, '__trigger__') and callable(v):
+                self.add(v)
         
     def add(self, analytic, on=None):
         """
@@ -137,6 +146,9 @@ class Session:
         """
         # Analytics can include routing metadata. 
         # If the analytic has routing metadata, the second param is optional.
+        if isinstance(analytic, ModuleType):
+            self._add_module(analytic)
+            return
         decorated_analytic = analytic
         if not on and not hasattr(analytic, '__trigger__'):
             raise ValueError('Route must be defined if analytic does not have route metadata.')
